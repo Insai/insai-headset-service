@@ -53,6 +53,16 @@ io.on("connection", socket => {
     }
   });
 
+  // Stop Sample
+  socket.on(headsetC.STOP_SAMPLE, async () => {
+    try {
+      await board.streamStop();
+      socket.emit(headsetC.STOP_SAMPLE_SUCCESS);
+    } catch (error) {
+      socket.emit(headsetC.STOP_SAMPLE_FAILURE, { error });
+    }
+  });
+
   // Disconnect Board
   socket.on(headsetC.DISCONNECT_HEADSET, async () => {
     if (board.isStreaming()) {
