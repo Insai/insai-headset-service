@@ -3,7 +3,7 @@ const server = require("http").Server(app);
 const io = require("socket.io")(server);
 const Board = require("./utils/cyton-board");
 const socketC = require("./constants/socket-action-types");
-const boardC = require("./constants/board-action-types");
+const headsetC = require("./constants/headset-action-types");
 
 /**
  * Config Variables
@@ -21,7 +21,7 @@ io.on("connection", socket => {
   var board;
 
   // Connect Cyton Board
-  socket.on(boardC.CONNECT_BOARD, async config => {
+  socket.on(headsetC.CONNECT_HEADSET, async config => {
     board = new Board({
       debug: config.debug || true,
       verbose: config.debug || true,
@@ -31,40 +31,42 @@ io.on("connection", socket => {
     });
     try {
       await board.connect(config);
-      socket.emit(boardC.CONNECT_BOARD_SUCCESS);
+      socket.emit(headsetC.CONNECT_HEADSET_SUCCESS);
     } catch (error) {
-      console.log(error);
-      socket.emit(boardC.CONNECT_BOARD_FAILURE, { error });
+      socket.emit(headsetC.CONNECT_HEADSET_FAILURE, { error });
       throw error;
     }
   });
 
   // Start Sample
-  socket.on(boardC.START_SAMPLE, async () => {
+  socket.on(headsetC.START_SAMPLE, async () => {
     try {
       await board.streamStart();
-      socket.emit(boardC.START_SAMPLE_SUCCESS);
+      socket.emit(headsetC.START_SAMPLE_SUCCESS);
       board.on("sample", sample => {
         const data = new Buffer(JSON.stringify(sample));
-        socket.emit(boardC.DATA_SAMPLE, { data });
+        socket.emit(headsetC.DATA_SAMPLE, { data });
         // console.log(sample);
       });
     } catch (error) {
-      console.log(error);
-      socket.emit(boardC.START_SAMPLE_FAILURE, { error });
+      socket.emit(headsetC.START_SAMPLE_FAILURE, { error });
     }
   });
 
   // Disconnect Board
-  socket.on(boardC.DISCONNECT_BOARD, async () => {
+  socket.on(headsetC.DISCONNECT_HEADSET, async () => {
+    if (board.isStreaming()) {
+      try {
+        await board.streamStop();
+      } catch (error) {
+        socket.emit(headsetC.DISCONNECT_HEADSET_FAILURE, { error });
+      }
+    }
     try {
-      console.log("Disconnect");
-      await board.streamStop();
       await board.disconnect();
-      socket.emit(boardC.DISCONNECT_BOARD_SUCCESS);
+      socket.emit(headsetC.DISCONNECT_HEADSET_SUCCESS);
     } catch (error) {
-      console.log(error);
-      socket.emit(boardC.DISCONNECT_BOARD_FAILURE);
+      socket.emit(headsetC.DISCONNECT_HEADSET_FAILURE, { error });
     }
   });
 });
